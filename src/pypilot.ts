@@ -46,6 +46,7 @@ export const closePyPilot = () => {
   if (socket) {
     socket.close()
   }
+  if(!server.handleMessage) { return }
   server.handleMessage(pluginId, {
     updates: [
       {

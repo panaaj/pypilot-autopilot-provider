@@ -107,7 +107,7 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
       // register as autopilot provider
       const result = registerProvider()
 
-      const msg = !registerProvider() ? `PyPilot` : `Provider not registered!`
+      const msg = !result ? `PyPilot` : `Provider not registered!`
 
       server.setPluginStatus(msg)
 
@@ -176,8 +176,6 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
   // initialise autopilot connection / emit status
   const initialise = () => {
     server.debug('Initialising autopilot comms....')
-
-    // register as autopilot provider
     initPyPilot(server, plugin.id, settings.pypilot)
   }
 
