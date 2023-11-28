@@ -1,6 +1,7 @@
 import { AutopilotProviderApp } from './'
 
 import { io, Socket } from 'socket.io-client'
+import { AutopilotInfo } from './sk-api'
 
 export interface PYPILOT_CONFIG {
   host: string
@@ -8,19 +9,25 @@ export interface PYPILOT_CONFIG {
 }
 
 // autopilot data
-export const apData: any = {
+export const apData: AutopilotInfo = {
   options: {
-    state: ['enabled', 'disabled'],
-    mode: []
+    states: [
+      { name: 'enabled', engaged: true },
+      { name: 'disabled', engaged: false }
+    ],
+    modes: []
   },
   state: null,
   mode: null,
-  target: null
+  target: null,
+  engaged: false
 }
 
 let server: AutopilotProviderApp
 let pluginId: string
 let socket: Socket
+
+export const PILOTIDS = ['pypilot-d1']
 
 // initialise connection to autopilot and register pypilot_web socket listeners
 export const initPyPilot = (
@@ -46,19 +53,6 @@ export const closePyPilot = () => {
   if (socket) {
     socket.close()
   }
-  if(!server.handleMessage) { return }
-  server.handleMessage(pluginId, {
-    updates: [
-      {
-        values: [
-          {
-            path: 'steering.autopilot.href',
-            value: null
-          }
-        ]
-      }
-    ]
-  })
 }
 
 // PyPilot socket event listeners
@@ -70,7 +64,7 @@ const initPyPilotListeners = () => {
 
     setTimeout(() => {
       const period = 1
-      socket.emit('pypilot', `watch={"ap.heading": ${JSON.stringify(period)}}`)
+      //socket.emit('pypilot', `watch={"ap.heading": ${JSON.stringify(period)}}`)
       socket.emit(
         'pypilot',
         `watch={"ap.heading_command": ${JSON.stringify(period)}}`
@@ -78,20 +72,6 @@ const initPyPilotListeners = () => {
       socket.emit('pypilot', `watch={"ap.enabled": ${JSON.stringify(period)}}`)
       socket.emit('pypilot', `watch={"ap.mode": ${JSON.stringify(period)}}`)
     }, 1000)
-
-    // flag pypilot as active pilot
-    server.handleMessage(pluginId, {
-      updates: [
-        {
-          values: [
-            {
-              path: 'steering.autopilot.href',
-              value: `./pypilot`
-            }
-          ]
-        }
-      ]
-    })
   })
 
   socket.on('connect_error', () => {
@@ -99,12 +79,12 @@ const initPyPilotListeners = () => {
     server.setPluginStatus(`Unable to connect to PyPilot!`)
   })
 
-  // pypilot updates listener
+  // pypilot updates listener (values)
   socket.on('pypilot', (msg) => {
     handlePyPilotUpdateMsg(JSON.parse(msg))
   })
 
-  // pypilot_values listener
+  // pypilot_values listener (choices)
   socket.on('pypilot_values', (msg) => {
     handlePyPilotValuesMsg(JSON.parse(msg))
   })
@@ -159,41 +139,36 @@ interface PYPILOT_UPDATE_MSG {
   'ap.enabled': boolean
 }
 
-// process received pypilot update messages and send SK delta
+// process received pypilot update messages (values)
 const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
   // compare and send delta
-
-  /*if (typeof data['ap.heading'] !== 'undefined') {
-    let heading = data['ap.heading'] === false ? null : data['ap.heading']
-    if (heading !== apData.heading) {
-      apData.heading = heading
-      emitDelta('target', (Math.PI /180) * apData.heading)
-    }
-  }*/
-
   //server.debug(`apUpdateMsg: ${JSON.stringify(data)}`)
 
   if (typeof data['ap.heading_command'] !== 'undefined') {
-    let heading =
+    const heading =
       data['ap.heading_command'] === false ? null : data['ap.heading_command']
-    if (heading !== apData.target) {
-      apData.target = heading
-      emitDelta('target', (Math.PI / 180) * apData.target)
+    if (typeof heading === 'number') {
+      const rad = (Math.PI / 180) * heading
+      if (rad !== apData.target) {
+        apData.target = rad
+        server.autopilotUpdate(PILOTIDS[0], 'target', apData.target)
+      }
     }
   }
 
   if (typeof data['ap.mode'] !== 'undefined') {
-    server.debug(`ap.mode -> data = ${JSON.stringify(data)}`)
     if (data['ap.mode'] !== apData.mode) {
       apData.mode = data['ap.mode']
-      emitDelta('mode', apData.mode)
+      server.autopilotUpdate(PILOTIDS[0], 'mode', apData.mode)
     }
   }
 
   if (typeof data['ap.enabled'] !== 'undefined') {
-    if (data['ap.enabled'] !== apData.state) {
+    if (data['ap.enabled'] !== apData.engaged) {
       apData.state = data['ap.enabled'] ? 'enabled' : 'disabled'
-      emitDelta('state', apData.state)
+      apData.engaged = data['ap.enabled']
+      server.autopilotUpdate(PILOTIDS[0], 'state', apData.state)
+      server.autopilotUpdate(PILOTIDS[0], 'engaged', apData.engaged)
     }
   }
 }
@@ -204,66 +179,59 @@ interface PYPILOT_VALUES_MSG {
   }
 }
 
-// process received pypilot_values message and send SK delta
+// process received pypilot_values message (choices)
 const handlePyPilotValuesMsg = (data: PYPILOT_VALUES_MSG) => {
   // available modes
   if (typeof data['ap.mode'] !== undefined && data['ap.mode'].choices) {
-    apData.options.mode = Array.isArray(data['ap.mode'].choices)
+    apData.options.modes = Array.isArray(data['ap.mode'].choices)
       ? data['ap.mode'].choices
       : []
   }
 }
 
-// emit SK delta steering.autopilot.xxx
-const emitDelta = (path: string, value: any) => {
-  const pathRoot = 'steering.autopilot'
-  let msg = {
-    path: `${pathRoot}.${path}`,
-    value: value
-  }
-  server.debug(`delta ${path} -> ${JSON.stringify(msg)}`)
-  server.handleMessage(pluginId, {
-    updates: [
-      {
-        values: [msg]
-      }
-    ]
-  })
-}
-
 // set autopilot state
-export const apEnable = (enable: boolean): Promise<void> => {
-  server.debug(`${pluginId} => apEnable(${enable})`)
-  apData.state = enable ? 'enabled' : 'disabled'
-  return sendToPyPilot('state', enable)
+export const apSetState = (state: string): boolean => {
+  server.debug(`${pluginId} => apSetState(${state})`)
+  let st: any
+  apData.options.states.forEach((i) => {
+    if (i.name === state) {
+      st = i
+    }
+  })
+  if (!st) {
+    throw new Error('Invalid state supplied!')
+  }
+  sendToPyPilot('state', st.engaged)
+  return st.engaged
 }
 
 // set autopilot mode
-export const apSetMode = (mode: string): Promise<void> => {
+export const apSetMode = (mode: string) => {
   server.debug(`${pluginId} => apsetMode(${mode})`)
-  if (apData.options.mode.includes(mode)) {
-    apData.mode = mode
-    return sendToPyPilot('mode', mode)
+  if (apData.options.modes.includes(mode)) {
+    sendToPyPilot('mode', mode)
+    return
   } else {
-    return Promise.reject()
+    throw new Error('Invalid mode supplied!')
   }
 }
 
 // set autopilot target
-export const apSetTarget = (value: number): Promise<void> => {
-  if (value > 359) {
-    apData.target = 359
-  } else if (value < -179) {
-    apData.target = -179
-  } else {
-    apData.target = value
+export const apSetTarget = (value: number) => {
+  let deg = value * (180 / Math.PI)
+  if (deg > 359) {
+    deg = 359
+  } else if (deg < -179) {
+    deg = -179
   }
-  server.debug(`${pluginId} => Target value set = ${apData.target}`)
-  return sendToPyPilot('target', value)
+  server.debug(`${pluginId} => Setting Target value to ${deg}`)
+  sendToPyPilot('target', deg)
+  return
 }
 
 // perform tack
-export const apTack = (port: boolean): Promise<void> => {
+export const apTack = (port: boolean) => {
   server.debug(`${pluginId} => apTack(${port})`)
-  return sendToPyPilot('tack', port ? 'port' : 'starboard')
+  sendToPyPilot('tack', port ? 'port' : 'starboard')
+  return
 }

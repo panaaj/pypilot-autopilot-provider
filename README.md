@@ -7,7 +7,7 @@ _Note: This plugin should ONLY be installed on a Signal K server that implements
 ---
 ## Description
 
-This plugin integrates with PyPilot to act as a provider for the Signal K Autopilot API `/signalk/v2/api/vessels/self/steering/autopilot`.
+This plugin integrates with PyPilot to act as a provider for the Signal K Autopilot API which provides services under the path `/signalk/v2/api/vessels/self/steering/autopilots`.
 
 
 **Note: The `pypilot_web` process must be running on the PyPilot host!**

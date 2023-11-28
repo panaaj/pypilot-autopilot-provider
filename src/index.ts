@@ -1,48 +1,28 @@
 import {
   Plugin,
-  PluginServerApp,
-  AutopilotProviderRegistry
+  ServerAPI //, AutopilotProviderRegistry
 } from '@signalk/server-api'
+
+import {
+  AutopilotProviderRegistry,
+  TackGybeDirection,
+  AutopilotInfo
+} from './sk-api'
 
 import {
   initPyPilot,
   closePyPilot,
   apData,
-  apEnable,
+  apSetState,
   apSetMode,
   apSetTarget,
-  apTack
+  apTack,
+  PILOTIDS
 } from './pypilot'
 
-interface DeltaUpdate {
-  updates: [
-    {
-      values: Array<{
-        path: string
-        value: any
-      }>
-    }
-  ]
-}
-
 export interface AutopilotProviderApp
-  extends PluginServerApp,
-    AutopilotProviderRegistry {
-  statusMessage?: () => string
-  error: (msg: string) => void
-  debug: (msg: string) => void
-  setPluginStatus: (pluginId: string, status?: string) => void
-  setPluginError: (pluginId: string, status?: string) => void
-  setProviderStatus: (providerId: string, status?: string) => void
-  setProviderError: (providerId: string, status?: string) => void
-  getSelfPath: (path: string) => void
-  savePluginOptions: (options: any, callback: () => void) => void
-  handleMessage: (id: string | null, msg: DeltaUpdate) => void
-  streambundle: {
-    getSelfBus: (path: string | void) => any
-  }
-  config: { configPath: string }
-}
+  extends ServerAPI,
+    AutopilotProviderRegistry {}
 
 const CONFIG_SCHEMA = {
   properties: {
@@ -130,43 +110,67 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
     server.setPluginStatus(msg)
   }
 
-  const deltaPath = 'steering.autopilot'
-
   const registerProvider = (): boolean => {
     try {
-      server.registerAutopilotProvider({
-        pilotType: 'PyPilot',
-        methods: {
-          getConfig: () => {
-            return Promise.resolve(apData)
+      server.registerAutopilotProvider(
+        {
+          getData: async (deviceId: string): Promise<AutopilotInfo> => {
+            return apData
           },
-          engage: (enable: boolean): Promise<void> => {
-            apEnable(enable)
-            return Promise.resolve()
+          getState: async (deviceId: string): Promise<string> => {
+            return apData.state as string
           },
-          setState: (state: string): Promise<void> => {
-            return apEnable(state === 'enabled' ? true : false)
+          setState: async (
+            state: string,
+            deviceId: string
+          ): Promise<boolean> => {
+            return apSetState(state)
           },
-          getState: (): Promise<string> => {
-            return Promise.resolve(apData.state)
+          getMode: async (deviceId: string): Promise<string> => {
+            return apData.mode as string
           },
-          setMode: (mode: string): Promise<void> => {
+          setMode: async (mode: string, deviceId: string): Promise<void> => {
             return apSetMode(mode)
           },
-          getMode: (): Promise<string> => {
-            return Promise.resolve(apData.mode)
+          getTarget: async (deviceId: string): Promise<number> => {
+            return apData.target as number
           },
-          setTarget: (value: number): Promise<void> => {
+          setTarget: async (value: number, deviceId: string): Promise<void> => {
             return apSetTarget(value)
           },
-          adjustTarget: (value: number): Promise<void> => {
-            return apSetTarget(apData.target + value)
+          adjustTarget: async (
+            value: number,
+            deviceId: string
+          ): Promise<void> => {
+            const t =
+              typeof apData.target !== 'number'
+                ? 0 + value
+                : apData.target + value
+            return apSetTarget(t)
           },
-          tack: (port: boolean): Promise<void> => {
-            return apTack(port)
+          engage: async (deviceId: string): Promise<void> => {
+            apSetState('enabled')
+            return
+          },
+          disengage: async (deviceId: string): Promise<void> => {
+            apSetState('disabled')
+            return
+          },
+          tack: async (
+            direction: TackGybeDirection,
+            deviceId: string
+          ): Promise<void> => {
+            return apTack(direction === 'port' ? true : false)
+          },
+          gybe: async (
+            direction: TackGybeDirection,
+            deviceId: string
+          ): Promise<void> => {
+            throw new Error('Not implemented!')
           }
-        }
-      })
+        },
+        PILOTIDS
+      )
       return true
     } catch (error) {
       return false

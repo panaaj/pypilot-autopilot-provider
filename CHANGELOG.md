@@ -8,6 +8,10 @@ __Requirements:__
 
 ---
 
+## v1.0.0-beta.2
+
+Updated to align with [Signal K Server PR #1596](https://github.com/SignalK/signalk-server/pull/1596).
+
 ## v1.0.0-beta.1
 
 Initial pre-release.
