@@ -77,6 +77,10 @@ const initPyPilotListeners = () => {
   socket.on('connect_error', () => {
     server.debug('socket connect_error!')
     server.setPluginStatus(`Unable to connect to PyPilot!`)
+    apData.state = 'off-line'
+    apData.engaged = false
+    server.autopilotUpdate(PILOTIDS[0], 'state', apData.state)
+    server.autopilotUpdate(PILOTIDS[0], 'engaged', apData.engaged)
   })
 
   // pypilot updates listener (values)
