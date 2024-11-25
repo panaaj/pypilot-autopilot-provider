@@ -16,6 +16,7 @@ import {
   apSetState,
   apSetMode,
   apSetTarget,
+  apDodge,
   apTack,
   PILOTIDS
 } from './pypilot'
@@ -120,11 +121,9 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
           getState: async (deviceId: string): Promise<string> => {
             return apData.state as string
           },
-          setState: async (
-            state: string,
-            deviceId: string
-          ): Promise<boolean> => {
-            return apSetState(state)
+          setState: async (state: string, deviceId: string): Promise<void> => {
+            apSetState(state)
+            return
           },
           getMode: async (deviceId: string): Promise<string> => {
             return apData.mode as string
@@ -142,11 +141,16 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
             value: number,
             deviceId: string
           ): Promise<void> => {
-            const t =
-              typeof apData.target !== 'number'
-                ? 0 + value
-                : apData.target + value
-            return apSetTarget(t)
+            if (apData.engaged) {
+              const t =
+                typeof apData.target !== 'number'
+                  ? 0 + value
+                  : apData.target + value
+              apSetTarget(t)
+            } else {
+              apDodge(value)
+            }
+            return
           },
           engage: async (deviceId: string): Promise<void> => {
             apSetState('enabled')
@@ -167,6 +171,15 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
             deviceId: string
           ): Promise<void> => {
             throw new Error('Not implemented!')
+          },
+          dodge: async (
+            value: number | null,
+            deviceId: string
+          ): Promise<void> => {
+            if (value) {
+              apDodge(value)
+            }
+            return
           }
         },
         PILOTIDS

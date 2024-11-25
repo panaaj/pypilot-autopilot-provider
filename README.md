@@ -1,23 +1,20 @@
 # Signal K PyPilot Autopilot Provider Plugin:
 
-__Signal K server plugin for integrating PyPilot with Signal K server Autopilot API__.
 
-_Note: This plugin should ONLY be installed on a Signal K server that implements the `Autopilot API`!_
+## About
 
----
-## Description
-
-This plugin integrates with PyPilot to act as a provider for the Signal K Autopilot API which provides services under the path `/signalk/v2/api/vessels/self/steering/autopilots`.
+Signal K server plugin for PyPilot that enables commands to be sent by Signal K client applications via the Autopilot API .
 
 
-**Note: The `pypilot_web` process must be running on the PyPilot host!**
+## Requirements
 
-The plugin requires the websocket connection provided by `pypilot_web` to communicate with PyPilot.
+- Signal K server that implements the `Autopilot API`
+- `pypilot_web` process running on the PyPilot host
 
-Type `pypilot_web` in a terminal window to start the process.
 
----
 ## Configuration
+
+The plugin communicates with PyPilot via the websocket connection provided by the `pypilot_web` process so you will need to ensure that it is running.
 
 From the Signal K server `Admin` console:
 -  Select **Server** -> **Plugin Config**
@@ -26,7 +23,7 @@ From the Signal K server `Admin` console:
 
 - Enter the host name / ip address of the PyPilot host.
 
-- Enter the port on which `pypilot_web` is listening.
+- Enter the port on which `pypilot_web` is listening _(default: 8000)_.
 
 - To initiate connection **Enable** the plugin.
 

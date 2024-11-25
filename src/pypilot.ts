@@ -27,6 +27,8 @@ let server: AutopilotProviderApp
 let pluginId: string
 let socket: Socket
 
+const degToRad = (value: number) => value * (Math.PI / 180)
+
 export const PILOTIDS = ['pypilot-d1']
 
 // initialise connection to autopilot and register pypilot_web socket listeners
@@ -79,8 +81,10 @@ const initPyPilotListeners = () => {
     server.setPluginStatus(`Unable to connect to PyPilot!`)
     apData.state = 'off-line'
     apData.engaged = false
-    server.autopilotUpdate(PILOTIDS[0], 'state', apData.state)
-    server.autopilotUpdate(PILOTIDS[0], 'engaged', apData.engaged)
+    server.autopilotUpdate(PILOTIDS[0], {
+      state: apData.state,
+      engaged: apData.engaged
+    })
   })
 
   // pypilot updates listener (values)
@@ -119,13 +123,42 @@ const sendToPyPilot = (path: string, value: any): Promise<void> => {
     ) {
       mode = 'ap.tack.direction'
     }
+  } else if (path === 'dodge') {
+    server.debug('** DODGE **')
+    let servo_command = 0
+    let servo_command_timeout = 0
+
+    // update manual servo command
+    const poll_pypilot = () => {
+      server.debug(
+        `** DODGE poll_pypilot -> timeout: ${servo_command_timeout}, cmd: ${servo_command} **`
+      )
+      server.debug(`** mode: ${mode}`)
+      if (servo_command_timeout > 0) {
+        setTimeout(poll_pypilot, 200)
+        servo_command_timeout--
+        if (servo_command_timeout <= 0) servo_command = 0
+        socket.emit('pypilot', mode + '=' + JSON.stringify(servo_command))
+      }
+    }
+
+    if (typeof value === 'number' && value !== 0) {
+      server.debug(`** DODGE value = ${value} **`)
+      const sign = value > 0 ? 1 : -1
+      servo_command = -sign
+      servo_command_timeout = Math.abs(value) > 5 ? 6 : 2
+      mode = 'servo.command'
+      setTimeout(poll_pypilot, 1000)
+    }
   } else {
     server.debug('Error: Invalid value!')
   }
 
   if (mode) {
     try {
-      socket.emit('pypilot', mode + '=' + JSON.stringify(value))
+      if (mode !== 'ap.servo_command') {
+        socket.emit('pypilot', mode + '=' + JSON.stringify(value))
+      }
       return Promise.resolve()
     } catch (error) {
       server.debug((error as Error).message)
@@ -146,16 +179,15 @@ interface PYPILOT_UPDATE_MSG {
 // process received pypilot update messages (values)
 const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
   // compare and send delta
-  //server.debug(`apUpdateMsg: ${JSON.stringify(data)}`)
-
   if (typeof data['ap.heading_command'] !== 'undefined') {
     const heading =
       data['ap.heading_command'] === false ? null : data['ap.heading_command']
     if (typeof heading === 'number') {
-      const rad = (Math.PI / 180) * heading
-      if (rad !== apData.target) {
-        apData.target = rad
-        server.autopilotUpdate(PILOTIDS[0], 'target', apData.target)
+      if (heading !== apData.target) {
+        apData.target = heading
+        server.autopilotUpdate(PILOTIDS[0], {
+          target: degToRad(apData.target)
+        })
       }
     }
   }
@@ -163,7 +195,9 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
   if (typeof data['ap.mode'] !== 'undefined') {
     if (data['ap.mode'] !== apData.mode) {
       apData.mode = data['ap.mode']
-      server.autopilotUpdate(PILOTIDS[0], 'mode', apData.mode)
+      server.autopilotUpdate(PILOTIDS[0], {
+        mode: apData.mode
+      })
     }
   }
 
@@ -171,8 +205,10 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
     if (data['ap.enabled'] !== apData.engaged) {
       apData.state = data['ap.enabled'] ? 'enabled' : 'disabled'
       apData.engaged = data['ap.enabled']
-      server.autopilotUpdate(PILOTIDS[0], 'state', apData.state)
-      server.autopilotUpdate(PILOTIDS[0], 'engaged', apData.engaged)
+      server.autopilotUpdate(PILOTIDS[0], {
+        state: apData.state,
+        engaged: apData.engaged
+      })
     }
   }
 }
@@ -222,14 +258,15 @@ export const apSetMode = (mode: string) => {
 
 // set autopilot target
 export const apSetTarget = (value: number) => {
-  let deg = value * (180 / Math.PI)
-  if (deg > 359) {
-    deg = 359
-  } else if (deg < -179) {
-    deg = -179
-  }
-  server.debug(`${pluginId} => Setting Target value to ${deg}`)
-  sendToPyPilot('target', deg)
+  server.debug(`${pluginId} => Setting Target value to ${value}`)
+  sendToPyPilot('target', value)
+  return
+}
+
+// set autopilot target
+export const apDodge = (value: number) => {
+  server.debug(`${pluginId} => Dodge value = ${value}`)
+  sendToPyPilot('dodge', value)
   return
 }
 

@@ -16,16 +16,14 @@ export interface AutopilotApi {
   apUpdate(
     pluginId: string,
     deviceId: string,
-    attrib: AutopilotUpdateAttrib,
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    value: any
+    apInfo: { [path: string]: any }
   ): void
 }
 
 export interface AutopilotProvider {
   getData(deviceId: string): Promise<AutopilotInfo>
   getState(deviceId: string): Promise<string>
-  setState(state: string, deviceId: string): Promise<boolean>
+  setState(state: string, deviceId: string): Promise<void>
   getMode(deviceId: string): Promise<string>
   setMode(mode: string, deviceId: string): Promise<void>
   getTarget(deviceId: string): Promise<number>
@@ -35,6 +33,7 @@ export interface AutopilotProvider {
   disengage(deviceId: string): Promise<void>
   tack(direction: TackGybeDirection, deviceId: string): Promise<void>
   gybe(direction: TackGybeDirection, deviceId: string): Promise<void>
+  dodge(direction: number | null, deviceId: string): Promise<void>
 }
 
 export interface AutopilotStateDef {
@@ -60,10 +59,6 @@ export interface AutopilotProviderRegistry {
     provider: AutopilotProvider,
     devices: string[]
   ): void
-  autopilotUpdate(
-    deviceId: string,
-    attrib: AutopilotUpdateAttrib,
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    value: any
-  ): void
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  autopilotUpdate(deviceId: string, apInfo: { [path: string]: any }): void
 }
