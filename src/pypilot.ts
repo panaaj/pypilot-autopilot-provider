@@ -27,7 +27,8 @@ let server: AutopilotProviderApp
 let pluginId: string
 let socket: Socket
 
-const degToRad = (value: number) => value * (Math.PI / 180)
+const degToRad = (deg: number) => deg * (Math.PI / 180)
+const radToDeg = (rad: number) => rad * (180 / Math.PI)
 
 export const PILOTIDS = ['pypilot-d1']
 
@@ -183,10 +184,11 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
     const heading =
       data['ap.heading_command'] === false ? null : data['ap.heading_command']
     if (typeof heading === 'number') {
-      if (heading !== apData.target) {
-        apData.target = heading
+      const rad = degToRad(heading)
+      if (rad !== apData.target) {
+        apData.target = rad
         server.autopilotUpdate(PILOTIDS[0], {
-          target: degToRad(apData.target)
+          target: apData.target
         })
       }
     }
@@ -258,15 +260,17 @@ export const apSetMode = (mode: string) => {
 
 // set autopilot target
 export const apSetTarget = (value: number) => {
-  server.debug(`${pluginId} => Setting Target value to ${value}`)
-  sendToPyPilot('target', value)
+  const deg = radToDeg(value)
+  server.debug(`${pluginId} => Setting Target value to ${value} (${deg})`)
+  sendToPyPilot('target', deg)
   return
 }
 
 // set autopilot target
 export const apDodge = (value: number) => {
-  server.debug(`${pluginId} => Dodge value = ${value}`)
-  sendToPyPilot('dodge', value)
+  const deg = radToDeg(value)
+  server.debug(`${pluginId} => Dodge value = ${value} (${deg})`)
+  sendToPyPilot('dodge', deg)
   return
 }
 
