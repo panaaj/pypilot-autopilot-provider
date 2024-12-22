@@ -17,7 +17,7 @@ export const apData: AutopilotInfo = {
     ],
     modes: []
   },
-  state: null,
+  state: 'disabled',
   mode: null,
   target: null,
   engaged: false
@@ -30,7 +30,7 @@ let socket: Socket
 const degToRad = (deg: number) => deg * (Math.PI / 180)
 const radToDeg = (rad: number) => rad * (180 / Math.PI)
 
-export const PILOTIDS = ['pypilot-d1']
+export const PILOTIDS = ['pypilot-sk']
 
 // initialise connection to autopilot and register pypilot_web socket listeners
 export const initPyPilot = (
@@ -67,7 +67,7 @@ const initPyPilotListeners = () => {
 
     setTimeout(() => {
       const period = 1
-      //socket.emit('pypilot', `watch={"ap.heading": ${JSON.stringify(period)}}`)
+      socket.emit('pypilot', `watch={"ap.heading": ${JSON.stringify(period)}}`)
       socket.emit(
         'pypilot',
         `watch={"ap.heading_command": ${JSON.stringify(period)}}`
@@ -75,6 +75,13 @@ const initPyPilotListeners = () => {
       socket.emit('pypilot', `watch={"ap.enabled": ${JSON.stringify(period)}}`)
       socket.emit('pypilot', `watch={"ap.mode": ${JSON.stringify(period)}}`)
     }, 1000)
+
+    server.autopilotUpdate(PILOTIDS[0], {
+      state: apData.state,
+      mode: apData.mode,
+      target: apData.target,
+      engaged: apData.engaged
+    })
   })
 
   socket.on('connect_error', () => {
@@ -212,6 +219,13 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
         engaged: apData.engaged
       })
     }
+  }
+
+  if (typeof data['ap.heading'] !== 'undefined') {
+    server.autopilotUpdate(PILOTIDS[0], {
+      state: apData.state,
+      engaged: apData.engaged
+    })
   }
 }
 
