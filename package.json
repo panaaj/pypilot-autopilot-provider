@@ -1,6 +1,6 @@
 {
     "name": "pypilot-autopilot-provider",
-    "version": "1.0.0-rc1",
+    "version": "1.0.0-rc2",
     "description": "PyPilot autopilot provider plugin for Signal K server.",
     "main": "plugin/index.js",
     "keywords": [
@@ -21,7 +21,9 @@
         "watch": "npm run build -- -w",
         "test": "echo \"Error: no test specified\" && exit 1",
         "start": "npm run build -- -w",
-        "format": "prettier --write src/*"
+        "format": "prettier --write src/*",
+        "prepublishOnly": "npm run format && npm run build",
+        "prepack": "npm run format && npm run build"
     },
     "dependencies": {
         "socket.io-client": "^4.4.1"

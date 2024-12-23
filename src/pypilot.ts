@@ -76,6 +76,7 @@ const initPyPilotListeners = () => {
       socket.emit('pypilot', `watch={"ap.mode": ${JSON.stringify(period)}}`)
     }, 1000)
 
+    apData.state = 'disabled'
     server.autopilotUpdate(PILOTIDS[0], {
       state: apData.state,
       mode: apData.mode,

@@ -178,8 +178,9 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
           ): Promise<void> => {
             if (value) {
               apDodge(value)
+            } else {
+              throw new Error('Not implemented!')
             }
-            return
           }
         },
         PILOTIDS
