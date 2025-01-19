@@ -1,6 +1,6 @@
 {
     "name": "pypilot-autopilot-provider",
-    "version": "1.0.0-rc2",
+    "version": "1.0.0",
     "description": "PyPilot autopilot provider plugin for Signal K server.",
     "main": "plugin/index.js",
     "keywords": [

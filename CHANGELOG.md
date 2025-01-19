@@ -1,5 +1,8 @@
 # CHANGELOG: PyPilot-Autopilot-Provider - Signal K plugin 
 
+## v1.0.0
+
+Initial release.
 
 ## v1.0.0-beta.3
 
