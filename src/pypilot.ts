@@ -1,7 +1,7 @@
 import { AutopilotProviderApp } from './'
 
 import { io, Socket } from 'socket.io-client'
-import { AutopilotInfo } from './sk-api'
+import { AutopilotInfo } from '@signalk/server-api'
 
 export interface PYPILOT_CONFIG {
   host: string
@@ -81,7 +81,7 @@ const initPyPilotListeners = () => {
       state: apData.state,
       mode: apData.mode,
       target: apData.target,
-      engaged: apData.engaged
+      engaged: apData.engaged as any
     })
   })
 
@@ -92,7 +92,7 @@ const initPyPilotListeners = () => {
     apData.engaged = false
     server.autopilotUpdate(PILOTIDS[0], {
       state: apData.state,
-      engaged: apData.engaged
+      engaged: apData.engaged as any
     })
   })
 
@@ -217,7 +217,7 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
       apData.engaged = data['ap.enabled']
       server.autopilotUpdate(PILOTIDS[0], {
         state: apData.state,
-        engaged: apData.engaged
+        engaged: apData.engaged as any
       })
     }
   }
@@ -225,7 +225,7 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
   if (typeof data['ap.heading'] !== 'undefined') {
     server.autopilotUpdate(PILOTIDS[0], {
       state: apData.state,
-      engaged: apData.engaged
+      engaged: apData.engaged as any
     })
   }
 }

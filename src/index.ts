@@ -1,13 +1,8 @@
 import {
   Plugin,
-  ServerAPI //, AutopilotProviderRegistry
+  ServerAPI, AutopilotProviderRegistry,
+  AutopilotInfo, TackGybeDirection
 } from '@signalk/server-api'
-
-import {
-  AutopilotProviderRegistry,
-  TackGybeDirection,
-  AutopilotInfo
-} from './sk-api'
 
 import {
   initPyPilot,
