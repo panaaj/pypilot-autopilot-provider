@@ -81,7 +81,7 @@ const initPyPilotListeners = () => {
       state: apData.state,
       mode: apData.mode,
       target: apData.target,
-      engaged: apData.engaged as any
+      engaged: apData.engaged
     })
   })
 
@@ -92,7 +92,7 @@ const initPyPilotListeners = () => {
     apData.engaged = false
     server.autopilotUpdate(PILOTIDS[0], {
       state: apData.state,
-      engaged: apData.engaged as any
+      engaged: apData.engaged
     })
   })
 
@@ -217,7 +217,7 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
       apData.engaged = data['ap.enabled']
       server.autopilotUpdate(PILOTIDS[0], {
         state: apData.state,
-        engaged: apData.engaged as any
+        engaged: apData.engaged
       })
     }
   }
@@ -225,7 +225,7 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
   if (typeof data['ap.heading'] !== 'undefined') {
     server.autopilotUpdate(PILOTIDS[0], {
       state: apData.state,
-      engaged: apData.engaged as any
+      engaged: apData.engaged
     })
   }
 }
