@@ -1,7 +1,7 @@
 import { AutopilotProviderApp } from './'
 
 import { io, Socket } from 'socket.io-client'
-import { AutopilotInfo } from '@signalk/server-api'
+import { AutopilotInfo, AutopilotStateDef } from '@signalk/server-api'
 
 export interface PYPILOT_CONFIG {
   host: string
@@ -9,18 +9,20 @@ export interface PYPILOT_CONFIG {
 }
 
 // autopilot data
-export const apData: AutopilotInfo = {
+export const apData: any = { // **@todo update ServerApi types** AutopilotInfo = {
   options: {
     states: [
       { name: 'enabled', engaged: true },
       { name: 'disabled', engaged: false }
     ],
-    modes: []
+    modes: [],
+    actions: ['tack']
   },
   state: 'disabled',
   mode: null,
   target: null,
-  engaged: false
+  engaged: false,
+  availableActions: []
 }
 
 let server: AutopilotProviderApp
@@ -74,6 +76,8 @@ const initPyPilotListeners = () => {
       )
       socket.emit('pypilot', `watch={"ap.enabled": ${JSON.stringify(period)}}`)
       socket.emit('pypilot', `watch={"ap.mode": ${JSON.stringify(period)}}`)
+      socket.emit('pypilot', `watch={"ap.modes": ${JSON.stringify(period)}}`)
+      socket.emit('pypilot', `watch={"profiles": ${JSON.stringify(period)}}`)
     }, 1000)
 
     apData.state = 'disabled'
@@ -81,7 +85,8 @@ const initPyPilotListeners = () => {
       state: apData.state,
       mode: apData.mode,
       target: apData.target,
-      engaged: apData.engaged
+      engaged: apData.engaged,
+      availableActions: getAvailableActions()
     })
   })
 
@@ -92,7 +97,8 @@ const initPyPilotListeners = () => {
     apData.engaged = false
     server.autopilotUpdate(PILOTIDS[0], {
       state: apData.state,
-      engaged: apData.engaged
+      engaged: apData.engaged,
+      availableActions: getAvailableActions()
     })
   })
 
@@ -178,11 +184,17 @@ const sendToPyPilot = (path: string, value: any): Promise<void> => {
   }
 }
 
+// return array of availableActions
+const getAvailableActions = () => {
+  return apData.engaged ? apData.options.actions : []
+}
+
 interface PYPILOT_UPDATE_MSG {
   'ap.heading': number
   'ap.heading_command': boolean
   'ap.mode': string
   'ap.enabled': boolean
+  'ap.modes': any
 }
 
 // process received pypilot update messages (values)
@@ -210,14 +222,19 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
       })
     }
   }
+  if (typeof data['ap.modes'] !== 'undefined') {
+    //console.log(data['ap.modes'])
+  }
 
   if (typeof data['ap.enabled'] !== 'undefined') {
     if (data['ap.enabled'] !== apData.engaged) {
       apData.state = data['ap.enabled'] ? 'enabled' : 'disabled'
       apData.engaged = data['ap.enabled']
+      apData.availableActions = getAvailableActions()
       server.autopilotUpdate(PILOTIDS[0], {
         state: apData.state,
-        engaged: apData.engaged
+        engaged: apData.engaged,
+        availableActions: apData.availableActions
       })
     }
   }
@@ -225,7 +242,8 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
   if (typeof data['ap.heading'] !== 'undefined') {
     server.autopilotUpdate(PILOTIDS[0], {
       state: apData.state,
-      engaged: apData.engaged
+      engaged: apData.engaged,
+      availableActions: getAvailableActions()
     })
   }
 }
@@ -250,7 +268,7 @@ const handlePyPilotValuesMsg = (data: PYPILOT_VALUES_MSG) => {
 export const apSetState = (state: string): boolean => {
   server.debug(`${pluginId} => apSetState(${state})`)
   let st: any
-  apData.options.states.forEach((i) => {
+  apData.options.states.forEach((i: AutopilotStateDef) => {
     if (i.name === state) {
       st = i
     }
