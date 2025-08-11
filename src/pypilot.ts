@@ -9,20 +9,36 @@ export interface PYPILOT_CONFIG {
 }
 
 // autopilot data
-export const apData: any = { // **@todo update ServerApi types** AutopilotInfo = {
+export const apData: any = {
+  // **@todo use updates ServerApi types when available** AutopilotInfo = {
   options: {
     states: [
       { name: 'enabled', engaged: true },
       { name: 'disabled', engaged: false }
     ],
     modes: [],
-    actions: ['tack']
+    actions: [
+      {
+        id: 'tack',
+        name: 'Tack',
+        available: false
+      },
+      {
+        id: 'courseCurrentPoint',
+        name: 'To Destination',
+        available: false
+      },
+      {
+        id: 'courseNextPoint',
+        name: 'Adv. Waypoint',
+        available: false
+      }
+    ]
   },
   state: 'disabled',
   mode: null,
   target: null,
-  engaged: false,
-  availableActions: []
+  engaged: false
 }
 
 let server: AutopilotProviderApp
@@ -31,6 +47,8 @@ let socket: Socket
 
 const degToRad = (deg: number) => deg * (Math.PI / 180)
 const radToDeg = (rad: number) => rad * (180 / Math.PI)
+
+let pypilotModes: string[] = [] // available modes received from PyPilot
 
 export const PILOTIDS = ['pypilot-sk']
 
@@ -79,15 +97,8 @@ const initPyPilotListeners = () => {
       socket.emit('pypilot', `watch={"ap.modes": ${JSON.stringify(period)}}`)
       socket.emit('pypilot', `watch={"profiles": ${JSON.stringify(period)}}`)
     }, 1000)
-
     apData.state = 'disabled'
-    server.autopilotUpdate(PILOTIDS[0], {
-      state: apData.state,
-      mode: apData.mode,
-      target: apData.target,
-      engaged: apData.engaged,
-      availableActions: getAvailableActions()
-    })
+    sendToSK()
   })
 
   socket.on('connect_error', () => {
@@ -95,11 +106,7 @@ const initPyPilotListeners = () => {
     server.setPluginStatus(`Unable to connect to PyPilot!`)
     apData.state = 'off-line'
     apData.engaged = false
-    server.autopilotUpdate(PILOTIDS[0], {
-      state: apData.state,
-      engaged: apData.engaged,
-      availableActions: getAvailableActions()
-    })
+    sendToSK()
   })
 
   // pypilot updates listener (values)
@@ -184,9 +191,50 @@ const sendToPyPilot = (path: string, value: any): Promise<void> => {
   }
 }
 
+// send status update to SK Server
+const sendToSK = () => {
+  setAvailableActions()
+  server.autopilotUpdate(PILOTIDS[0], {
+    state: apData.state,
+    mode: apData.mode,
+    target: apData.target,
+    engaged: apData.engaged,
+    availableActions: getAvailableActions()
+  })
+}
+
 // return array of availableActions
 const getAvailableActions = () => {
-  return apData.engaged ? apData.options.actions : []
+  return apData.options.actions
+    .filter((i: any) => i.available)
+    .map((i: { id: string }) => i.id)
+}
+
+// update the options.actions array
+const setAvailableActions = () => {
+  if (apData.engaged) {
+    apData.options.actions.forEach((i: any) => {
+      if (i.id === 'tack') {
+        i.available = true
+      }
+      if (i.id === 'courseCurrentPoint') {
+        i.available = pypilotModes.includes('nav')
+      }
+    })
+  } else {
+    apData.options.actions.forEach((i: any) => {
+      i.available = false
+    })
+  }
+}
+
+// perform `engage` operation
+export const engagePilot = async () => {
+  const cdata = await server.getCourse()
+  if (cdata.nextPoint && getAvailableActions().includes('courseCurrentPoint')) {
+    apSetMode('nav')
+  }
+  apSetState('enabled')
 }
 
 interface PYPILOT_UPDATE_MSG {
@@ -207,9 +255,6 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
       const rad = degToRad(heading)
       if (rad !== apData.target) {
         apData.target = rad
-        server.autopilotUpdate(PILOTIDS[0], {
-          target: apData.target
-        })
       }
     }
   }
@@ -217,35 +262,24 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
   if (typeof data['ap.mode'] !== 'undefined') {
     if (data['ap.mode'] !== apData.mode) {
       apData.mode = data['ap.mode']
-      server.autopilotUpdate(PILOTIDS[0], {
-        mode: apData.mode
-      })
     }
   }
+
   if (typeof data['ap.modes'] !== 'undefined') {
-    //console.log(data['ap.modes'])
+    pypilotModes = data['ap.modes']
   }
 
   if (typeof data['ap.enabled'] !== 'undefined') {
     if (data['ap.enabled'] !== apData.engaged) {
       apData.state = data['ap.enabled'] ? 'enabled' : 'disabled'
       apData.engaged = data['ap.enabled']
-      apData.availableActions = getAvailableActions()
-      server.autopilotUpdate(PILOTIDS[0], {
-        state: apData.state,
-        engaged: apData.engaged,
-        availableActions: apData.availableActions
-      })
     }
   }
 
   if (typeof data['ap.heading'] !== 'undefined') {
-    server.autopilotUpdate(PILOTIDS[0], {
-      state: apData.state,
-      engaged: apData.engaged,
-      availableActions: getAvailableActions()
-    })
   }
+
+  sendToSK()
 }
 
 interface PYPILOT_VALUES_MSG {
@@ -256,7 +290,7 @@ interface PYPILOT_VALUES_MSG {
 
 // process received pypilot_values message (choices)
 const handlePyPilotValuesMsg = (data: PYPILOT_VALUES_MSG) => {
-  // available modes
+  // supported modes
   if (typeof data['ap.mode'] !== undefined && data['ap.mode'].choices) {
     apData.options.modes = Array.isArray(data['ap.mode'].choices)
       ? data['ap.mode'].choices

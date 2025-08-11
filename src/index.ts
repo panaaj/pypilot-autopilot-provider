@@ -1,7 +1,9 @@
 import {
   Plugin,
-  ServerAPI, AutopilotProviderRegistry,
-  AutopilotInfo, TackGybeDirection
+  ServerAPI,
+  AutopilotProviderRegistry,
+  AutopilotInfo,
+  TackGybeDirection
 } from '@signalk/server-api'
 
 import {
@@ -13,6 +15,7 @@ import {
   apSetTarget,
   apDodge,
   apTack,
+  engagePilot,
   PILOTIDS
 } from './pypilot'
 
@@ -148,7 +151,7 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
             return
           },
           engage: async (deviceId: string): Promise<void> => {
-            apSetState('enabled')
+            engagePilot()
             return
           },
           disengage: async (deviceId: string): Promise<void> => {
@@ -178,6 +181,16 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
             }
           }
         },
+        /*courseCurrentPoint: async (
+          deviceId: string
+        ): Promise<void> => {
+          throw new Error('Not implemented!')
+        },
+        courseNextPoint: async (
+          deviceId: string
+        ): Promise<void> => {
+          throw new Error('Not implemented!')
+        },*/
         PILOTIDS
       )
       return true
