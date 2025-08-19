@@ -1,6 +1,6 @@
 # CHANGELOG: PyPilot-Autopilot-Provider - Signal K plugin 
 
-## v1.1.0-beta.1
+## v1.1.0-beta.2
 
 Add support for `actions`.
 

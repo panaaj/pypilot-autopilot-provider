@@ -9,8 +9,7 @@ export interface PYPILOT_CONFIG {
 }
 
 // autopilot data
-export const apData: any = {
-  // **@todo use updates ServerApi types when available** AutopilotInfo = {
+export const apData: AutopilotInfo = {
   options: {
     states: [
       { name: 'enabled', engaged: true },
@@ -228,13 +227,24 @@ const setAvailableActions = () => {
   }
 }
 
-// perform `engage` operation
-export const engagePilot = async () => {
+// set nav mode if available
+export const apSetNavMode = async () => {
   const cdata = await server.getCourse()
   if (cdata.nextPoint && getAvailableActions().includes('courseCurrentPoint')) {
     apSetMode('nav')
+    setTimeout(() => apSetState('enabled'), 500)
+  } else {
+    throw new Error('Nav mode is not available!')
   }
-  apSetState('enabled')
+}
+
+// perform `engage` operation
+export const engagePilot = async () => {
+  try {
+    await apSetNavMode()
+  } catch (err) {
+    apSetState('enabled')
+  }
 }
 
 interface PYPILOT_UPDATE_MSG {
@@ -262,6 +272,9 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
   if (typeof data['ap.mode'] !== 'undefined') {
     if (data['ap.mode'] !== apData.mode) {
       apData.mode = data['ap.mode']
+      if (apData.options.modes.length === 0) {
+        apData.options.modes.push(apData.mode)
+      }
     }
   }
 
@@ -270,10 +283,8 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
   }
 
   if (typeof data['ap.enabled'] !== 'undefined') {
-    if (data['ap.enabled'] !== apData.engaged) {
-      apData.state = data['ap.enabled'] ? 'enabled' : 'disabled'
-      apData.engaged = data['ap.enabled']
-    }
+    apData.state = data['ap.enabled'] ? 'enabled' : 'disabled'
+    apData.engaged = data['ap.enabled']
   }
 
   if (typeof data['ap.heading'] !== 'undefined') {
@@ -291,11 +302,9 @@ interface PYPILOT_VALUES_MSG {
 // process received pypilot_values message (choices)
 const handlePyPilotValuesMsg = (data: PYPILOT_VALUES_MSG) => {
   // supported modes
-  if (typeof data['ap.mode'] !== undefined && data['ap.mode'].choices) {
-    apData.options.modes = Array.isArray(data['ap.mode'].choices)
-      ? data['ap.mode'].choices
-      : []
-  }
+  apData.options.modes = Array.isArray(data['ap.mode']?.choices)
+    ? data['ap.mode'].choices
+    : pypilotModes ?? []
 }
 
 // set autopilot state

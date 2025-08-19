@@ -15,6 +15,7 @@ import {
   apSetTarget,
   apDodge,
   apTack,
+  apSetNavMode,
   engagePilot,
   PILOTIDS
 } from './pypilot'
@@ -158,6 +159,12 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
             apSetState('disabled')
             return
           },
+          courseCurrentPoint: async (deviceId: string): Promise<void> => {
+            await apSetNavMode()
+          },
+          courseNextPoint: async (deviceId: string): Promise<void> => {
+            throw new Error('Not implemented!')
+          },
           tack: async (
             direction: TackGybeDirection,
             deviceId: string
@@ -181,16 +188,6 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
             }
           }
         },
-        /*courseCurrentPoint: async (
-          deviceId: string
-        ): Promise<void> => {
-          throw new Error('Not implemented!')
-        },
-        courseNextPoint: async (
-          deviceId: string
-        ): Promise<void> => {
-          throw new Error('Not implemented!')
-        },*/
         PILOTIDS
       )
       return true
