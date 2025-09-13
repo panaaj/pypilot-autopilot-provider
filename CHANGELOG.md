@@ -2,7 +2,7 @@
 
 ## v1.1.0-beta.2
 
-Add support for `actions`.
+Added support for `actions`.
 
 
 ## v1.0.0
