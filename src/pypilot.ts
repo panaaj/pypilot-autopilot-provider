@@ -198,7 +198,7 @@ const sendToSK = () => {
     mode: apData.mode,
     target: apData.target,
     engaged: apData.engaged,
-    availableActions: getAvailableActions()
+    actions: apData.options.actions
   })
 }
 
