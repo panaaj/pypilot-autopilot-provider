@@ -304,7 +304,7 @@ const handlePyPilotValuesMsg = (data: PYPILOT_VALUES_MSG) => {
   // supported modes
   apData.options.modes = Array.isArray(data['ap.mode']?.choices)
     ? data['ap.mode'].choices
-    : pypilotModes ?? []
+    : (pypilotModes ?? [])
 }
 
 // set autopilot state

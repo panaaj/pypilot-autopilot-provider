@@ -21,8 +21,7 @@ import {
 } from './pypilot'
 
 export interface AutopilotProviderApp
-  extends ServerAPI,
-    AutopilotProviderRegistry {}
+  extends ServerAPI, AutopilotProviderRegistry {}
 
 const CONFIG_SCHEMA = {
   properties: {

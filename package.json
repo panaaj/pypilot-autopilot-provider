@@ -1,8 +1,12 @@
 {
     "name": "pypilot-autopilot-provider",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "PyPilot autopilot provider plugin for Signal K server.",
     "main": "plugin/index.js",
+    "signalk": {
+        "displayName": "PyPilot Autopilot Provider",
+        "appIcon": "./app-icon.svg"
+    },
     "keywords": [
         "signalk-node-server-plugin",
         "pypilot"
@@ -34,8 +38,8 @@
         "@types/baconjs": "^0.7.34",
         "@types/express": "^5.0.3",
         "@types/node-fetch": "^2.6.13",
-        "prettier": "^2.5.1",
-        "typescript": "^4.5.4"
+        "prettier": "^3.8.4",
+        "typescript": "^6.0.3"
     },
     "signalk-plugin-enabled-by-default": false
 }
