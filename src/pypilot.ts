@@ -48,6 +48,7 @@ const degToRad = (deg: number) => deg * (Math.PI / 180)
 const radToDeg = (rad: number) => rad * (180 / Math.PI)
 
 let pypilotModes: string[] = [] // available modes received from PyPilot
+let pypilotHeading: number | null = null // last `ap.heading` received from PyPilot (degrees, mode referenced)
 
 export const PILOTIDS = ['pypilot-sk']
 
@@ -287,7 +288,8 @@ const handlePyPilotUpdateMsg = (data: PYPILOT_UPDATE_MSG) => {
     apData.engaged = data['ap.enabled']
   }
 
-  if (typeof data['ap.heading'] !== 'undefined') {
+  if (typeof data['ap.heading'] === 'number') {
+    pypilotHeading = data['ap.heading']
   }
 
   sendToSK()
@@ -318,6 +320,11 @@ export const apSetState = (state: string): boolean => {
   })
   if (!st) {
     throw new Error('Invalid state supplied!')
+  }
+  // PyPilot resumes the stale `ap.heading_command` unless the target is
+  // reset to the current heading as part of engaging.
+  if (st.engaged && !apData.engaged && typeof pypilotHeading === 'number') {
+    sendToPyPilot('target', pypilotHeading)
   }
   sendToPyPilot('state', st.engaged)
   return st.engaged
