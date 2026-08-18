@@ -1,6 +1,6 @@
 # CHANGELOG: PyPilot-Autopilot-Provider - Signal K plugin 
 
-## Unreleased
+## v1.1.3
 
 - Fixed: target is reset to the current heading when engaging, so the pilot no longer resumes a stale course. ([#6](https://github.com/panaaj/pypilot-autopilot-provider/issues/6))
 
