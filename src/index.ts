@@ -168,7 +168,7 @@ module.exports = (server: AutopilotProviderApp): Plugin => {
             direction: TackGybeDirection,
             deviceId: string
           ): Promise<void> => {
-            return apTack(direction === 'port' ? true : false)
+            return apTack(direction)
           },
           gybe: async (
             direction: TackGybeDirection,

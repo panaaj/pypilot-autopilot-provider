@@ -1,7 +1,11 @@
 import { AutopilotProviderApp } from './'
 
 import { io, Socket } from 'socket.io-client'
-import { AutopilotInfo, AutopilotStateDef } from '@signalk/server-api'
+import {
+  AutopilotInfo,
+  AutopilotStateDef,
+  TackGybeDirection
+} from '@signalk/server-api'
 
 export interface PYPILOT_CONFIG {
   host: string
@@ -144,6 +148,12 @@ const sendToPyPilot = (path: string, value: any): Promise<void> => {
       (value === 'port' || value === 'starboard')
     ) {
       mode = 'ap.tack.direction'
+    }
+  } else if (path === 'tack.state') {
+    // `begin` starts the manoeuvre, `none` cancels one in progress. PyPilot accepts
+    // only those two values, see `TackState` in pypilot/tacking.py.
+    if (typeof value === 'string' && (value === 'begin' || value === 'none')) {
+      mode = 'ap.tack.state'
     }
   } else if (path === 'dodge') {
     server.debug('** DODGE **')
@@ -358,8 +368,12 @@ export const apDodge = (value: number) => {
 }
 
 // perform tack
-export const apTack = (port: boolean) => {
-  server.debug(`${pluginId} => apTack(${port})`)
-  sendToPyPilot('tack', port ? 'port' : 'starboard')
+// PyPilot's tack is a two step operation: `ap.tack.direction` only selects the side,
+// `ap.tack.state = 'begin'` starts manoeuvre, compare implementations in
+// pypilot in ui/autopilot_control.py, hat/hat.py, web/static/pypilot_control.js.
+export const apTack = async (direction: TackGybeDirection) => {
+  server.debug(`${pluginId} => apTack(${direction})`)
+  await sendToPyPilot('tack', direction)
+  await sendToPyPilot('tack.state', 'begin')
   return
 }
