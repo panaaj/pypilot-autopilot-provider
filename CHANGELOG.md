@@ -1,5 +1,9 @@
 # CHANGELOG: PyPilot-Autopilot-Provider - Signal K plugin 
 
+## v1.1.4
+
+- Fixed: Start the tack after setting direction. ([#8](https://github.com/panaaj/pypilot-autopilot-provider/issues/8))
+
 ## v1.1.3
 
 - Fixed: target is reset to the current heading when engaging, so the pilot no longer resumes a stale course. ([#6](https://github.com/panaaj/pypilot-autopilot-provider/issues/6))
