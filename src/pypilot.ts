@@ -47,6 +47,7 @@ export const apData: AutopilotInfo = {
 let server: AutopilotProviderApp
 let pluginId: string
 let socket: Socket
+let watching = false
 
 const degToRad = (deg: number) => deg * (Math.PI / 180)
 const radToDeg = (rad: number) => rad * (180 / Math.PI)
@@ -86,42 +87,74 @@ export const closePyPilot = () => {
 const initPyPilotListeners = () => {
   socket.on('connect', () => {
     server.debug('socket connected...')
-    let msg = `Started: Connected to PyPilot.`
-    server.setPluginStatus(msg)
-
     setTimeout(() => {
-      const period = 1
-      socket.emit('pypilot', `watch={"ap.heading": ${JSON.stringify(period)}}`)
-      socket.emit(
-        'pypilot',
-        `watch={"ap.heading_command": ${JSON.stringify(period)}}`
-      )
-      socket.emit('pypilot', `watch={"ap.enabled": ${JSON.stringify(period)}}`)
-      socket.emit('pypilot', `watch={"ap.mode": ${JSON.stringify(period)}}`)
-      socket.emit('pypilot', `watch={"ap.modes": ${JSON.stringify(period)}}`)
-      socket.emit('pypilot', `watch={"profiles": ${JSON.stringify(period)}}`)
+      server.debug('socket connected..delayed start initWatch()')
+      watching = false
+      initWatch()
     }, 1000)
+
     apData.state = 'disabled'
     sendToSK()
   })
 
   socket.on('connect_error', () => {
     server.debug('socket connect_error!')
-    server.setPluginStatus(`Unable to connect to PyPilot!`)
-    apData.state = 'off-line'
-    apData.engaged = false
-    sendToSK()
+    server.setPluginError(`Unable to connect to PyPilot!`)
+    handleDisconnection()
   })
 
   // pypilot updates listener (values)
   socket.on('pypilot', (msg) => {
+    messageReceived()
     handlePyPilotUpdateMsg(JSON.parse(msg))
   })
 
   // pypilot_values listener (choices)
   socket.on('pypilot_values', (msg) => {
+    messageReceived()
     handlePyPilotValuesMsg(JSON.parse(msg))
   })
+
+  // handle pypilot disconnection from pypilot_web
+  socket.on('pypilot_disconnect', () => {
+    server.debug('pypilot_disconnected!')
+    watching = false
+    server.setPluginError(`PyPilot is disconnected!`)
+    handleDisconnection()
+    setTimeout(() => {
+      initWatch()
+    }, 3000)
+  })
+}
+
+// initialise PyPilot event watch
+const initWatch = () => {
+  if (watching) return
+  const period = 1
+  socket.emit('pypilot', `watch={"ap.heading": ${JSON.stringify(period)}}`)
+  socket.emit(
+    'pypilot',
+    `watch={"ap.heading_command": ${JSON.stringify(period)}}`
+  )
+  socket.emit('pypilot', `watch={"ap.enabled": ${JSON.stringify(period)}}`)
+  socket.emit('pypilot', `watch={"ap.mode": ${JSON.stringify(period)}}`)
+  socket.emit('pypilot', `watch={"ap.modes": ${JSON.stringify(period)}}`)
+  socket.emit('pypilot', `watch={"profiles": ${JSON.stringify(period)}}`)
+}
+
+// flag that incoming message has bee received from PyPilot
+const messageReceived = () => {
+  if (!watching) {
+    server.setPluginStatus(`Started: Connected to PyPilot.`)
+    watching = true
+  }
+}
+
+// pypilot disconnection handler
+const handleDisconnection = () => {
+  apData.state = 'off-line'
+  apData.engaged = false
+  sendToSK()
 }
 
 // Send values to pypilot
